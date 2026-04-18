@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { ArrowLeft, CalendarDays, Clock3, Building2, Phone, FileText } from 'lucide-react';
 import { Card } from './ui/card';
@@ -27,13 +27,46 @@ export function AppointmentsPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const appointments = useMemo(() => {
-    const raw = localStorage.getItem('healthfinder_appointments');
-    const allAppointments: AppointmentRecord[] = raw ? JSON.parse(raw) : [];
+  const [appointments, setAppointments] = useState<AppointmentRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-    return allAppointments
-      .filter((appointment) => appointment.userEmail === user?.email)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      setIsLoading(true);
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+      
+      let allAppointments: AppointmentRecord[] = [];
+      
+      if (apiBaseUrl) {
+        try {
+          const res = await fetch(`${apiBaseUrl}/api/appointments`);
+          if (res.ok) {
+            allAppointments = await res.json();
+          }
+        } catch (err) {
+          console.warn('API error, falling back to local storage', err);
+          const raw = localStorage.getItem('healthfinder_appointments');
+          allAppointments = raw ? JSON.parse(raw) : [];
+        }
+      } else {
+        const raw = localStorage.getItem('healthfinder_appointments');
+        allAppointments = raw ? JSON.parse(raw) : [];
+      }
+
+      const userAppts = allAppointments
+        .filter((appointment) => appointment.userEmail === user?.email)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        
+      setAppointments(userAppts);
+      setIsLoading(false);
+    };
+
+    if (user?.email) {
+      fetchAppointments();
+    } else {
+      setAppointments([]);
+      setIsLoading(false);
+    }
   }, [user?.email]);
 
   return (
@@ -52,7 +85,11 @@ export function AppointmentsPage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8">
-        {appointments.length === 0 ? (
+        {isLoading ? (
+          <Card className="p-10 text-center">
+            <h2 className="text-lg font-semibold mb-2">Loading appointments...</h2>
+          </Card>
+        ) : appointments.length === 0 ? (
           <Card className="p-10 text-center">
             <CalendarDays className="size-12 text-gray-400 mx-auto mb-4" />
             <h2 className="text-lg font-semibold mb-2">No appointments yet</h2>
