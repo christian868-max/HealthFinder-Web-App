@@ -119,5 +119,20 @@ app.post('/api/signin', async (req, res) => {
   }
 });
 
+app.get('/api/users', async (req, res) => {
+  if (!isDatabaseReady) {
+    return res.json(fallbackUsers.map(u => ({ id: u.id, name: u.name, email: u.email, role: 'user' })));
+  }
+
+  try {
+    const result = await pool.query('SELECT id, name, email FROM users');
+    const usersWithRoles = result.rows.map(u => ({ ...u, role: 'user' }));
+    res.json(usersWithRoles);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 const PORT = 3001;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

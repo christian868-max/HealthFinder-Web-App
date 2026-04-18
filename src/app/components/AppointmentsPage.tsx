@@ -19,6 +19,7 @@ interface AppointmentRecord {
   facilityPhone: string;
   selectedDate: string;
   selectedTime: string;
+  status?: 'pending' | 'confirmed' | 'rejected';
   createdAt: string;
 }
 
@@ -69,7 +70,29 @@ export function AppointmentsPage() {
                     <h3 className="font-semibold text-lg">{appointment.facilityName}</h3>
                     <p className="text-sm text-gray-600">{appointment.facilityAddress}</p>
                   </div>
-                  <Badge>Booked</Badge>
+                  <Badge
+                    variant={
+                      appointment.status === 'confirmed'
+                        ? 'secondary'
+                        : appointment.status === 'rejected'
+                          ? 'destructive'
+                          : 'secondary'
+                    }
+                    className={
+                      appointment.status === 'confirmed'
+                        ? 'relative overflow-hidden border-emerald-200 bg-gradient-to-r from-emerald-500 via-green-500 to-lime-500 text-white shadow-[0_4px_14px_rgba(16,185,129,0.35)]'
+                        : undefined
+                    }
+                  >
+                    {appointment.status === 'confirmed' ? (
+                      <>
+                        <span className="absolute inset-0 bg-gradient-to-b from-white/45 via-white/10 to-transparent pointer-events-none" />
+                        <span className="relative">Confirmed</span>
+                      </>
+                    ) : appointment.status === 'rejected'
+                      ? 'Rejected'
+                      : 'Pending'}
+                  </Badge>
                 </div>
 
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4 text-sm">

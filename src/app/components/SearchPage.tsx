@@ -14,7 +14,7 @@ export function SearchPage() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const accountMenuRef = useRef<HTMLDivElement | null>(null);
-  
+
   const handleLogOut = () => {
     setIsAccountMenuOpen(false);
     signOut();
@@ -77,18 +77,18 @@ export function SearchPage() {
               <Activity className="size-8 text-blue-600" />
               <h1 className="text-2xl font-semibold text-gray-900">HealthFinder</h1>
             </div>
-            
+
             {/* User Menu */}
             <div className="relative" ref={accountMenuRef}>
-                <Button
-                  variant="outline"
-                  className="gap-2 rounded-full px-4"
-                  onClick={() => setIsAccountMenuOpen((prev) => !prev)}
-                >
-                  <User className="size-5" />
-                  <span className="hidden sm:inline">{user?.name || 'Account'}</span>
-                  <ChevronDown className="size-4 text-gray-500" />
-                </Button>
+              <Button
+                variant="outline"
+                className="gap-2 rounded-full px-4"
+                onClick={() => setIsAccountMenuOpen((prev) => !prev)}
+              >
+                <User className="size-5" />
+                <span className="hidden sm:inline">{user?.name || 'Account'}</span>
+                <ChevronDown className="size-4 text-gray-500" />
+              </Button>
               {isAccountMenuOpen && (
                 <div className="absolute right-0 mt-2 w-52 rounded-md border bg-white p-1 shadow-lg z-50">
                   <div className="px-2 py-1.5 text-sm font-medium text-gray-900">My Account</div>
@@ -145,7 +145,7 @@ export function SearchPage() {
                   className="pl-10 h-12 text-base"
                 />
               </div>
-              <Button 
+              <Button
                 onClick={() => handleSearch()}
                 size="lg"
                 className="px-8"

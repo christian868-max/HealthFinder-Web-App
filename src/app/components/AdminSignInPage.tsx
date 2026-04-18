@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { useNavigate, Link, Navigate } from 'react-router';
-import { Activity, Lock, Mail, AlertCircle } from 'lucide-react';
+import { Shield, Lock, Mail, AlertCircle } from 'lucide-react';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Label } from './ui/label';
 import { Alert, AlertDescription } from './ui/alert';
 import { useAuth } from '../context/AuthContext';
+import { localHasAnyAdmin } from '../auth/localAuth';
 
-export function SignInPage() {
+export function AdminSignInPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -16,9 +17,8 @@ export function SignInPage() {
   const navigate = useNavigate();
   const { signIn, isAuthenticated, isAdmin } = useAuth();
 
-  // Keep admin and user flows separated.
-  if (isAuthenticated) {
-    return <Navigate to={isAdmin ? '/admin' : '/'} replace />;
+  if (isAuthenticated && isAdmin) {
+    return <Navigate to="/admin" replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -27,34 +27,34 @@ export function SignInPage() {
     setIsLoading(true);
 
     try {
-      const result = await signIn(email, password, 'user');
+      const result = await signIn(email, password, 'admin');
       if (result === true) {
-        navigate('/');
+        navigate('/admin');
       } else if (result === 'invalid_role') {
-        setError('This login is for users only. Admin accounts must use the Admin Login page.');
+        setError('This account is not an admin.');
       } else {
-        setError('Invalid email or password. Please try again.');
+        setError('Invalid email or password.');
       }
-    } catch (err) {
+    } catch {
       setError('An error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
+  const showSetupLink = !localHasAnyAdmin();
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center px-4">
       <div className="w-full max-w-md">
-        {/* Logo and Title */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center size-16 bg-blue-100 rounded-full mb-4">
-            <Activity className="size-8 text-blue-600" />
+            <Shield className="size-8 text-blue-600" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
-          <p className="text-gray-600">Sign in to your HealthFinder account</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Login</h1>
+          <p className="text-gray-600">Sign in to manage bookings and facilities</p>
         </div>
 
-        {/* Sign In Form */}
         <Card className="p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
@@ -74,7 +74,7 @@ export function SignInPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="your.email@example.com"
+                placeholder="admin@healthfinder.com"
                 required
                 autoComplete="email"
               />
@@ -96,37 +96,29 @@ export function SignInPage() {
               />
             </div>
 
-            <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" className="rounded" />
-                <span className="text-gray-600">Remember me</span>
-              </label>
-              <a href="#" className="text-blue-600 hover:underline">
-                Forgot password?
-              </a>
-            </div>
-
             <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-              {isLoading ? 'Signing in...' : 'Sign In'}
+              {isLoading ? 'Signing in...' : 'Sign In as Admin'}
             </Button>
           </form>
 
           <div className="mt-6 text-center text-sm space-y-2">
             <div>
-              <span className="text-gray-600">Don't have an account? </span>
-              <Link to="/signup" className="text-blue-600 hover:underline font-medium">
-                Sign Up
+              <Link to="/signin" className="text-blue-600 hover:underline font-medium">
+                Back to user login
               </Link>
             </div>
-            <div>
-              <Link to="/admin/signin" className="text-blue-600 hover:underline font-medium">
-                Log in as Admin
-              </Link>
-            </div>
+            {showSetupLink ? (
+              <div className="text-gray-600">
+                No admin exists yet.{' '}
+                <Link to="/admin/setup" className="text-blue-600 hover:underline font-medium">
+                  Create first admin
+                </Link>
+              </div>
+            ) : null}
           </div>
         </Card>
-
       </div>
     </div>
   );
 }
+

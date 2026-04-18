@@ -27,6 +27,7 @@ export function BookingDialog({ facility, isOpen, onClose }: BookingDialogProps)
   const [patientName, setPatientName] = useState('');
   const [patientEmail, setPatientEmail] = useState('');
   const [patientPhone, setPatientPhone] = useState('');
+  const [phoneError, setPhoneError] = useState('');
   const [reason, setReason] = useState('');
   const [isBooked, setIsBooked] = useState(false);
   const { user } = useAuth();
@@ -53,7 +54,9 @@ export function BookingDialog({ facility, isOpen, onClose }: BookingDialogProps)
       // For 24/7 facilities, show slots throughout the day
       for (let hour = 0; hour < 24; hour++) {
         for (let minute of [0, 30]) {
-          const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+          const ampm = hour >= 12 ? 'PM' : 'AM';
+          const displayHour = hour % 12 || 12;
+          const time = `${displayHour}:${minute.toString().padStart(2, '0')} ${ampm}`;
           const isPast = selectedDate === availableDates[0].value && 
             new Date().getHours() > hour || 
             (new Date().getHours() === hour && new Date().getMinutes() > minute);
@@ -73,7 +76,9 @@ export function BookingDialog({ facility, isOpen, onClose }: BookingDialogProps)
       
       for (let hour = startHour; hour < endHour; hour++) {
         for (let minute of [0, 30]) {
-          const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+          const ampm = hour >= 12 ? 'PM' : 'AM';
+          const displayHour = hour % 12 || 12;
+          const time = `${displayHour}:${minute.toString().padStart(2, '0')} ${ampm}`;
           const isPast = selectedDate === availableDates[0].value && 
             new Date().getHours() > hour || 
             (new Date().getHours() === hour && new Date().getMinutes() > minute);
@@ -90,8 +95,24 @@ export function BookingDialog({ facility, isOpen, onClose }: BookingDialogProps)
 
   const timeSlots = generateTimeSlots();
 
+  const formatPhoneForDisplay = (value: string) => {
+    // Keep only common phone characters and limit length.
+    return value.replace(/[^\d+\-()\s]/g, '').slice(0, 20);
+  };
+
+  const hasValidPhoneNumber = (value: string) => {
+    const digitsOnly = value.replace(/\D/g, '');
+    return digitsOnly.length >= 10 && digitsOnly.length <= 15;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!hasValidPhoneNumber(patientPhone)) {
+      setPhoneError('Please enter a valid phone number with 10 to 15 digits.');
+      return;
+    }
+
+    setPhoneError('');
     const storedAppointments = localStorage.getItem('healthfinder_appointments');
     const appointments = storedAppointments ? JSON.parse(storedAppointments) : [];
 
@@ -108,6 +129,7 @@ export function BookingDialog({ facility, isOpen, onClose }: BookingDialogProps)
       facilityPhone: facility.phoneNumber,
       selectedDate,
       selectedTime,
+      status: 'pending',
       createdAt: new Date().toISOString(),
     });
     localStorage.setItem('healthfinder_appointments', JSON.stringify(appointments));
@@ -126,6 +148,7 @@ export function BookingDialog({ facility, isOpen, onClose }: BookingDialogProps)
     setPatientName('');
     setPatientEmail('');
     setPatientPhone('');
+    setPhoneError('');
     setReason('');
     setIsBooked(false);
     onClose();
@@ -236,16 +259,22 @@ export function BookingDialog({ facility, isOpen, onClose }: BookingDialogProps)
                     <Label htmlFor="phone">Phone Number *</Label>
                     <Input
                       id="phone"
-                      type="text"
+                      type="tel"
                       value={patientPhone}
-                      onChange={(e) => setPatientPhone(e.target.value)}
-                      placeholder="09XXXXXXXXX"
-                      inputMode="numeric"
-                      pattern="^09\\d{9}$"
-                      title="Enter a valid PH mobile number (11 digits, starts with 09)"
+                      onChange={(e) => {
+                        setPatientPhone(formatPhoneForDisplay(e.target.value));
+                        if (phoneError) {
+                          setPhoneError('');
+                        }
+                      }}
+                      placeholder="+63 9XX XXX XXXX or 09XXXXXXXXX"
+                      inputMode="tel"
                       required
                       className="mt-1"
                     />
+                    {phoneError ? (
+                      <p className="mt-1 text-sm text-red-600">{phoneError}</p>
+                    ) : null}
                   </div>
 
                   <div>

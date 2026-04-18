@@ -3,8 +3,11 @@ import { SearchPage } from './components/SearchPage';
 import { ResultsPage } from './components/ResultsPage';
 import { SignInPage } from './components/SignInPage';
 import { SignUpPage } from './components/SignUpPage';
-import { ProtectedRoute } from './components/ProtectedRoute';
+import { AdminRoute, ProtectedRoute } from './components/ProtectedRoute';
 import { AppointmentsPage } from './components/AppointmentsPage';
+import { AdminSignInPage } from './components/AdminSignInPage';
+import { AdminSetupPage } from './components/AdminSetupPage';
+import { AdminPage } from './components/AdminPage';
 
 export const router = createBrowserRouter([
   {
@@ -38,6 +41,22 @@ export const router = createBrowserRouter([
   {
     path: '/signup',
     Component: SignUpPage,
+  },
+  {
+    path: '/admin/signin',
+    Component: AdminSignInPage,
+  },
+  {
+    path: '/admin/setup',
+    Component: AdminSetupPage,
+  },
+  {
+    path: '/admin',
+    element: (
+      <AdminRoute>
+        <AdminPage />
+      </AdminRoute>
+    ),
   },
   {
     path: '*',

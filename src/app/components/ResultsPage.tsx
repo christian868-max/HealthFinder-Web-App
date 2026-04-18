@@ -8,9 +8,10 @@ import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { FacilityCard } from './FacilityCard';
 import { BookingDialog } from './BookingDialog';
-import { mockFacilities, illnessToSpecialtyMap } from '../data/mockData';
+import { illnessToSpecialtyMap } from '../data/mockData';
 import { Facility, FacilityType, CrowdLevel } from '../types/facility';
 import { useAuth } from '../context/AuthContext';
+import { getFacilities } from '../storage/facilitiesStore';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,13 +42,13 @@ export function ResultsPage() {
 
   // Filter and sort facilities
   const filteredFacilities = useMemo(() => {
-    let results = [...mockFacilities];
+    let results = [...getFacilities()];
 
     // Filter by illness/specialty
     const relevantSpecialties = illnessToSpecialtyMap[illness] || [];
     if (relevantSpecialties.length > 0) {
       results = results.map(facility => {
-        const matchScore = facility.specialties.filter(s => 
+        const matchScore = facility.specialties.filter(s =>
           relevantSpecialties.some(rs => rs.toLowerCase().includes(s.toLowerCase()) || s.toLowerCase().includes(rs.toLowerCase()))
         ).length;
         return { ...facility, matchScore };
