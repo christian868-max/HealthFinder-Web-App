@@ -41,6 +41,11 @@ const initDB = async () => {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'user';
     `);
 
+    // Add last_active_at column
+    await pool.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS last_active_at TIMESTAMP;
+    `);
+
     // Appointments table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS appointments (
@@ -153,12 +158,31 @@ app.post('/api/signin', async (req, res) => {
 
 app.get('/api/users', async (req, res) => {
   if (!isDatabaseReady) {
-    return res.json(fallbackUsers.map(u => ({ id: u.id, name: u.name, email: u.email, role: u.role || 'user' })));
+    return res.json(fallbackUsers.map(u => ({ id: u.id, name: u.name, email: u.email, role: u.role || 'user', last_active_at: u.last_active_at })));
   }
 
   try {
-    const result = await pool.query('SELECT id, name, email, role FROM users');
+    const result = await pool.query('SELECT id, name, email, role, last_active_at FROM users');
     res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.post('/api/users/:email/ping', async (req, res) => {
+  const email = req.params.email;
+  if (!isDatabaseReady) {
+    const user = fallbackUsers.find(u => u.email === email);
+    if (user) {
+      user.last_active_at = new Date().toISOString();
+    }
+    return res.json({ success: true });
+  }
+
+  try {
+    await pool.query('UPDATE users SET last_active_at = CURRENT_TIMESTAMP WHERE email = $1', [email]);
+    res.json({ success: true });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });

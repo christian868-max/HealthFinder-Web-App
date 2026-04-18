@@ -39,6 +39,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  useEffect(() => {
+    if (!user || !apiBaseUrl) return;
+
+    const pingServer = async () => {
+      try {
+        await fetch(`${apiBaseUrl}/api/users/${encodeURIComponent(user.email)}/ping`, {
+          method: 'POST',
+        });
+      } catch (err) {
+        // Ignore silent ping failures
+      }
+    };
+
+    pingServer();
+    const interval = setInterval(pingServer, 60000);
+
+    return () => clearInterval(interval);
+  }, [user, apiBaseUrl]);
+
   const signIn = async (email: string, password: string, expectedRole?: 'user' | 'admin'): Promise<boolean | string> => {
     const tryLocal = (): boolean | string => {
       const result = localSignIn(email, password);

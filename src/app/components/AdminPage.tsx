@@ -188,13 +188,22 @@ export function AdminPage() {
         const res = await fetch(`${apiBaseUrl}/api/users`);
         if (res.ok) {
            const dbUsers = await res.json();
-           const dbMapped = dbUsers.map((u: any) => ({
-              id: u.id.toString(),
-              name: u.name,
-              email: u.email,
-              role: u.role || 'user',
-              isActive: false
-           }));
+           const dbMapped = dbUsers.map((u: any) => {
+              let isOnline = false;
+              if (u.last_active_at) {
+                const diff = Date.now() - new Date(u.last_active_at).getTime();
+                isOnline = diff < 5 * 60 * 1000; // 5 minutes
+              }
+              
+              return {
+                id: u.id.toString(),
+                name: u.name,
+                email: u.email,
+                role: u.role || 'user',
+                isActive: isOnline,
+                lastActiveAt: u.last_active_at
+              };
+           });
            
            // Merge local accounts (which contains your Admins) with DB users
            const combined = [...localAccounts];
@@ -653,7 +662,7 @@ export function AdminPage() {
                 </div>
 
                 <p className="text-xs text-gray-500 mt-4">
-                  Status is tracked for this browser storage. "Active" means currently signed in on this app in this browser.
+                  Status is tracked via server pings. "Active" means the user has been online in the last 5 minutes.
                 </p>
               </Card>
             </div>
