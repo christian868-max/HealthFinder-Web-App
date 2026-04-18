@@ -138,25 +138,37 @@ export function AdminPage() {
   const [accounts, setAccounts] = useState<LocalAccountSummary[]>([]);
 
   const fetchAccountsFromApi = async () => {
+    const localAccounts = listLocalAccounts();
     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+    
     if (apiBaseUrl) {
       try {
         const res = await fetch(`${apiBaseUrl}/api/users`);
         if (res.ok) {
            const dbUsers = await res.json();
-           return dbUsers.map((u: any) => ({
+           const dbMapped = dbUsers.map((u: any) => ({
               id: u.id.toString(),
               name: u.name,
               email: u.email,
               role: u.role || 'user',
               isActive: false
            }));
+           
+           // Merge local accounts (which contains your Admins) with DB users
+           const combined = [...localAccounts];
+           dbMapped.forEach((dbUser: any) => {
+             // Add the DB user if they aren't already in the local list
+             if (!combined.some(c => c.email === dbUser.email)) {
+               combined.push(dbUser);
+             }
+           });
+           return combined;
         }
       } catch (e) {
         console.warn('Failed API /api/users. Falling back to local', e)
       }
     }
-    return listLocalAccounts();
+    return localAccounts;
   };
 
   const refreshAccounts = async () => {
