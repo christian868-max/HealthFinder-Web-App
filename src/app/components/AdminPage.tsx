@@ -208,9 +208,20 @@ export function AdminPage() {
            // Merge local accounts (which contains your Admins) with DB users
            const combined = [...localAccounts];
            dbMapped.forEach((dbUser: any) => {
-             // Add the DB user if they aren't already in the local list
-             if (!combined.some(c => c.email === dbUser.email)) {
+             const localIdx = combined.findIndex(c => c.email === dbUser.email);
+             if (localIdx === -1) {
                combined.push(dbUser);
+             } else {
+               // Update local record with DB data if DB says they are online
+               if (dbUser.isActive) {
+                 combined[localIdx].isActive = true;
+               }
+               // Always use the latest lastActiveAt (either local or DB)
+               const localTime = combined[localIdx].lastActiveAt ? new Date(combined[localIdx].lastActiveAt).getTime() : 0;
+               const dbTime = dbUser.lastActiveAt ? new Date(dbUser.lastActiveAt).getTime() : 0;
+               if (dbTime > localTime) {
+                 combined[localIdx].lastActiveAt = dbUser.lastActiveAt;
+               }
              }
            });
            return combined;
