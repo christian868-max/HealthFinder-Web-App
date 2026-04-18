@@ -1,6 +1,5 @@
 # Health Clinic Availability App
 
-This is a code bundle for Health Clinic Availability App. The original project is available at https://www.figma.com/design/DhNboFWDHDQQeR13VsFLzX/Health-Clinic-Availability-App.
 
 ## Running the code
 
