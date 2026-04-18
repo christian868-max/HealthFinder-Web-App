@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { CalendarDays, CheckCircle, XCircle, Building2, Plus, Users, Shield, UserCircle2, Trash2 } from 'lucide-react';
+import { CalendarDays, CheckCircle, XCircle, Building2, Plus, Users, Shield, UserCircle2, Trash2, Eye, EyeOff } from 'lucide-react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -133,6 +133,7 @@ export function AdminPage() {
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [newRole, setNewRole] = useState<'user' | 'admin'>('user');
   const [accountMsg, setAccountMsg] = useState<string>('');
   const [accounts, setAccounts] = useState<LocalAccountSummary[]>([]);
@@ -458,7 +459,22 @@ export function AdminPage() {
                   </div>
                   <div>
                     <Label>Password</Label>
-                    <Input value={newPassword} onChange={(e) => setNewPassword(e.target.value)} type="password" placeholder="At least 6 characters" />
+                    <div className="relative">
+                      <Input
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="At least 6 characters"
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                      >
+                        {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                      </button>
+                    </div>
                   </div>
                   <div>
                     <Label>Role</Label>
