@@ -107,3 +107,10 @@ export function setLocalAccountActive(email: string, isActive: boolean) {
   };
   writeUsers(users);
 }
+
+export function deleteLocalAccount(email: string) {
+  const key = normalizeEmail(email);
+  const users = readUsers();
+  const next = users.filter((u) => normalizeEmail(u.email) !== key);
+  writeUsers(next);
+}

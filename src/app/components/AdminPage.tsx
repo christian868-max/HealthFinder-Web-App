@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { useAuth } from '../context/AuthContext';
 import { Facility, FacilityType } from '../types/facility';
 import { getFacilities, saveFacilities } from '../storage/facilitiesStore';
-import { LocalAccountSummary, listLocalAccounts, localSignUp } from '../auth/localAuth';
+import { LocalAccountSummary, listLocalAccounts, localSignUp, deleteLocalAccount } from '../auth/localAuth';
 
 type AppointmentStatus = 'pending' | 'confirmed' | 'rejected';
 
@@ -174,6 +174,25 @@ export function AdminPage() {
   const refreshAccounts = async () => {
     const data = await fetchAccountsFromApi();
     setAccounts(data);
+  };
+
+  const deleteAccount = async (email: string) => {
+    if (!window.confirm(`Are you sure you want to delete ${email}?`)) return;
+
+    deleteLocalAccount(email);
+
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+    if (apiBaseUrl) {
+      try {
+        await fetch(`${apiBaseUrl}/api/users/${encodeURIComponent(email)}`, {
+          method: 'DELETE',
+        });
+      } catch (e) {
+        console.warn('Failed API delete', e);
+      }
+    }
+
+    refreshAccounts();
   };
 
   useMemo(() => { refreshAccounts(); }, []);
@@ -484,25 +503,36 @@ export function AdminPage() {
                       ) : (
                         userAccounts.map((account) => (
                           <div key={account.id} className="border rounded-lg p-3 bg-white">
-                            <div className="flex items-center justify-between">
-                              <p className="font-medium text-sm">{account.name}</p>
-                              <Badge
-                                variant="secondary"
-                                className={
-                                  account.isActive
-                                    ? 'relative overflow-hidden border-emerald-200 bg-gradient-to-r from-emerald-500 via-green-500 to-lime-500 text-white shadow-[0_4px_14px_rgba(16,185,129,0.35)]'
-                                    : undefined
-                                }
-                              >
-                                {account.isActive ? (
-                                  <>
-                                    <span className="absolute inset-0 bg-gradient-to-b from-white/45 via-white/10 to-transparent pointer-events-none" />
-                                    <span className="relative">Active</span>
-                                  </>
-                                ) : (
-                                  'Inactive'
-                                )}
-                              </Badge>
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="font-medium text-sm truncate">{account.name}</p>
+                              <div className="flex items-center gap-1">
+                                <Badge
+                                  variant="secondary"
+                                  className={
+                                    account.isActive
+                                      ? 'relative overflow-hidden border-emerald-200 bg-gradient-to-r from-emerald-500 via-green-500 to-lime-500 text-white shadow-[0_4px_14px_rgba(16,185,129,0.35)]'
+                                      : undefined
+                                  }
+                                >
+                                  {account.isActive ? (
+                                    <>
+                                      <span className="absolute inset-0 bg-gradient-to-b from-white/45 via-white/10 to-transparent pointer-events-none" />
+                                      <span className="relative">Active</span>
+                                    </>
+                                  ) : (
+                                    'Inactive'
+                                  )}
+                                </Badge>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full"
+                                  onClick={() => deleteAccount(account.email)}
+                                  title="Delete account"
+                                >
+                                  <Trash2 className="size-3" />
+                                </Button>
+                              </div>
                             </div>
                             <p className="text-xs text-gray-600 mt-1">{account.email}</p>
                             <p className="text-xs text-gray-500 mt-1">Last seen: {formatLastSeen(account.lastActiveAt)}</p>
@@ -525,25 +555,36 @@ export function AdminPage() {
                       ) : (
                         adminAccounts.map((account) => (
                           <div key={account.id} className="border rounded-lg p-3 bg-white">
-                            <div className="flex items-center justify-between">
-                              <p className="font-medium text-sm">{account.name}</p>
-                              <Badge
-                                variant="secondary"
-                                className={
-                                  account.isActive
-                                    ? 'relative overflow-hidden border-emerald-200 bg-gradient-to-r from-emerald-500 via-green-500 to-lime-500 text-white shadow-[0_4px_14px_rgba(16,185,129,0.35)]'
-                                    : undefined
-                                }
-                              >
-                                {account.isActive ? (
-                                  <>
-                                    <span className="absolute inset-0 bg-gradient-to-b from-white/45 via-white/10 to-transparent pointer-events-none" />
-                                    <span className="relative">Active</span>
-                                  </>
-                                ) : (
-                                  'Inactive'
-                                )}
-                              </Badge>
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="font-medium text-sm truncate">{account.name}</p>
+                              <div className="flex items-center gap-1">
+                                <Badge
+                                  variant="secondary"
+                                  className={
+                                    account.isActive
+                                      ? 'relative overflow-hidden border-emerald-200 bg-gradient-to-r from-emerald-500 via-green-500 to-lime-500 text-white shadow-[0_4px_14px_rgba(16,185,129,0.35)]'
+                                      : undefined
+                                  }
+                                >
+                                  {account.isActive ? (
+                                    <>
+                                      <span className="absolute inset-0 bg-gradient-to-b from-white/45 via-white/10 to-transparent pointer-events-none" />
+                                      <span className="relative">Active</span>
+                                    </>
+                                  ) : (
+                                    'Inactive'
+                                  )}
+                                </Badge>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full"
+                                  onClick={() => deleteAccount(account.email)}
+                                  title="Delete account"
+                                >
+                                  <Trash2 className="size-3" />
+                                </Button>
+                              </div>
                             </div>
                             <p className="text-xs text-gray-600 mt-1">{account.email}</p>
                             <p className="text-xs text-gray-500 mt-1">Last seen: {formatLastSeen(account.lastActiveAt)}</p>

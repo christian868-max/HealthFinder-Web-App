@@ -134,5 +134,21 @@ app.get('/api/users', async (req, res) => {
   }
 });
 
-const PORT = 3001;
+app.delete('/api/users/:email', async (req, res) => {
+  const email = req.params.email;
+  if (!isDatabaseReady) {
+    fallbackUsers = fallbackUsers.filter(u => u.email !== email);
+    return res.json({ success: true });
+  }
+
+  try {
+    await pool.query('DELETE FROM users WHERE email = $1', [email]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
