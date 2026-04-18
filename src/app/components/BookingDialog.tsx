@@ -30,6 +30,7 @@ export function BookingDialog({ facility, isOpen, onClose }: BookingDialogProps)
   const [phoneError, setPhoneError] = useState('');
   const [reason, setReason] = useState('');
   const [isBooked, setIsBooked] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
 
   // Generate available dates (next 7 days)
@@ -105,7 +106,7 @@ export function BookingDialog({ facility, isOpen, onClose }: BookingDialogProps)
     return digitsOnly.length >= 10 && digitsOnly.length <= 15;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!hasValidPhoneNumber(patientPhone)) {
       setPhoneError('Please enter a valid phone number with 10 to 15 digits.');
@@ -113,11 +114,9 @@ export function BookingDialog({ facility, isOpen, onClose }: BookingDialogProps)
     }
 
     setPhoneError('');
-    const storedAppointments = localStorage.getItem('healthfinder_appointments');
-    const appointments = storedAppointments ? JSON.parse(storedAppointments) : [];
-
-    appointments.push({
-      id: Date.now().toString(),
+    setIsLoading(true);
+    
+    const newAppointment = {
       userId: user?.id ?? null,
       userEmail: user?.email ?? patientEmail,
       patientName,
@@ -131,9 +130,31 @@ export function BookingDialog({ facility, isOpen, onClose }: BookingDialogProps)
       selectedTime,
       status: 'pending',
       createdAt: new Date().toISOString(),
-    });
-    localStorage.setItem('healthfinder_appointments', JSON.stringify(appointments));
+    };
 
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+    if (apiBaseUrl) {
+      try {
+        await fetch(`${apiBaseUrl}/api/appointments`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newAppointment),
+        });
+      } catch (err) {
+        console.warn('API error, falling back to local storage', err);
+        const storedAppointments = localStorage.getItem('healthfinder_appointments');
+        const appointments = storedAppointments ? JSON.parse(storedAppointments) : [];
+        appointments.push({ ...newAppointment, id: Date.now().toString() });
+        localStorage.setItem('healthfinder_appointments', JSON.stringify(appointments));
+      }
+    } else {
+      const storedAppointments = localStorage.getItem('healthfinder_appointments');
+      const appointments = storedAppointments ? JSON.parse(storedAppointments) : [];
+      appointments.push({ ...newAppointment, id: Date.now().toString() });
+      localStorage.setItem('healthfinder_appointments', JSON.stringify(appointments));
+    }
+
+    setIsLoading(false);
     setIsBooked(true);
     
     // Reset after showing confirmation
@@ -318,9 +339,9 @@ export function BookingDialog({ facility, isOpen, onClose }: BookingDialogProps)
                 <Button
                   type="submit"
                   className="flex-1"
-                  disabled={!selectedDate || !selectedTime || !patientName || !patientEmail || !patientPhone}
+                  disabled={!selectedDate || !selectedTime || !patientName || !patientEmail || !patientPhone || isLoading}
                 >
-                  Confirm Booking
+                  {isLoading ? 'Booking...' : 'Confirm Booking'}
                 </Button>
               </div>
             </form>

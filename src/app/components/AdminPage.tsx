@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { CalendarDays, CheckCircle, XCircle, Building2, Plus, Users, Shield, UserCircle2, Trash2, Eye, EyeOff } from 'lucide-react';
 import { Card } from './ui/card';
@@ -71,33 +71,74 @@ export function AdminPage() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
 
-  const [appointments, setAppointments] = useState<AppointmentRecord[]>(() =>
-    readAppointments()
-      .map((a) => ({ ...a, status: a.status ?? 'pending' }))
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-  );
+  const [appointments, setAppointments] = useState<AppointmentRecord[]>([]);
 
-  const refreshAppointments = () => {
+  const fetchAppointmentsFromApi = async () => {
+    const localAppts = readAppointments();
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+    if (apiBaseUrl) {
+      try {
+        const res = await fetch(`${apiBaseUrl}/api/appointments`);
+        if (res.ok) {
+          return await res.json();
+        }
+      } catch (err) {
+        console.warn('API fetch failed, fallback to local', err);
+      }
+    }
+    return localAppts;
+  };
+
+  const refreshAppointments = async () => {
+    const data = await fetchAppointmentsFromApi();
     setAppointments(
-      readAppointments()
-        .map((a) => ({ ...a, status: a.status ?? 'pending' }))
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      data
+        .map((a: any) => ({ ...a, status: a.status ?? 'pending' }))
+        .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     );
   };
+
+  useEffect(() => {
+    refreshAppointments();
+  }, []);
 
   const pendingCount = useMemo(() => appointments.filter((a) => (a.status ?? 'pending') === 'pending').length, [appointments]);
 
-  const setStatus = (id: string, status: AppointmentStatus) => {
-    const next = readAppointments().map((a) =>
-      a.id === id ? { ...a, status, updatedAt: new Date().toISOString() } : a
-    );
-    writeAppointments(next);
+  const setStatus = async (id: string, status: AppointmentStatus) => {
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+    if (apiBaseUrl) {
+      try {
+        await fetch(`${apiBaseUrl}/api/appointments/${id}/status`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status })
+        });
+      } catch (e) {
+        console.warn(e);
+      }
+    } else {
+      const next = readAppointments().map((a) =>
+        a.id === id ? { ...a, status, updatedAt: new Date().toISOString() } : a
+      );
+      writeAppointments(next);
+    }
     refreshAppointments();
   };
 
-  const deleteAppointment = (id: string) => {
-    const next = readAppointments().filter((a) => a.id !== id);
-    writeAppointments(next);
+  const deleteAppointment = async (id: string) => {
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+    if (apiBaseUrl) {
+      try {
+        await fetch(`${apiBaseUrl}/api/appointments/${id}`, {
+          method: 'DELETE'
+        });
+      } catch (e) {
+        console.warn(e);
+      }
+    } else {
+      const next = readAppointments().filter((a) => a.id !== id);
+      writeAppointments(next);
+    }
     refreshAppointments();
   };
 

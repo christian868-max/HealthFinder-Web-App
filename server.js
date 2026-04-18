@@ -21,6 +21,8 @@ const pool = new Pool({
 let isDatabaseReady = false;
 let fallbackUsers = [];
 let fallbackUserId = 1;
+let fallbackAppointments = [];
+let fallbackAppointmentId = 1;
 
 // Initialize DB
 const initDB = async () => {
@@ -37,6 +39,27 @@ const initDB = async () => {
     // Add role column for existing databases that don't have it
     await pool.query(`
       ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'user';
+    `);
+
+    // Appointments table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS appointments (
+        id SERIAL PRIMARY KEY,
+        user_id VARCHAR(255),
+        user_email VARCHAR(100),
+        patient_name VARCHAR(100),
+        patient_email VARCHAR(100),
+        patient_phone VARCHAR(50),
+        reason TEXT,
+        facility_name VARCHAR(100),
+        facility_address TEXT,
+        facility_phone VARCHAR(50),
+        selected_date VARCHAR(20),
+        selected_time VARCHAR(20),
+        status VARCHAR(20) DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
     `);
     
     isDatabaseReady = true;
@@ -166,6 +189,112 @@ app.delete('/api/users/:email', async (req, res) => {
 
   try {
     await pool.query('DELETE FROM users WHERE email = $1', [email]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.post('/api/appointments', async (req, res) => {
+  const {
+    userId, userEmail, patientName, patientEmail, patientPhone,
+    reason, facilityName, facilityAddress, facilityPhone,
+    selectedDate, selectedTime, status, createdAt
+  } = req.body;
+
+  if (!isDatabaseReady) {
+    const created = {
+      id: String(fallbackAppointmentId++),
+      userId, userEmail, patientName, patientEmail, patientPhone,
+      reason, facilityName, facilityAddress, facilityPhone,
+      selectedDate, selectedTime, status: status || 'pending',
+      createdAt: createdAt || new Date().toISOString()
+    };
+    fallbackAppointments.push(created);
+    return res.json(created);
+  }
+
+  try {
+    const result = await pool.query(`
+      INSERT INTO appointments (
+        user_id, user_email, patient_name, patient_email, patient_phone,
+        reason, facility_name, facility_address, facility_phone,
+        selected_date, selected_time, status, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      RETURNING id, user_id as "userId", user_email as "userEmail", 
+                patient_name as "patientName", patient_email as "patientEmail", 
+                patient_phone as "patientPhone", reason, 
+                facility_name as "facilityName", facility_address as "facilityAddress", 
+                facility_phone as "facilityPhone", selected_date as "selectedDate", 
+                selected_time as "selectedTime", status, created_at as "createdAt"
+    `, [
+      userId, userEmail, patientName, patientEmail, patientPhone,
+      reason, facilityName, facilityAddress, facilityPhone,
+      selectedDate, selectedTime, status || 'pending', createdAt || new Date().toISOString()
+    ]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.get('/api/appointments', async (req, res) => {
+  if (!isDatabaseReady) {
+    return res.json(fallbackAppointments);
+  }
+
+  try {
+    const result = await pool.query(`
+      SELECT id, user_id as "userId", user_email as "userEmail", 
+             patient_name as "patientName", patient_email as "patientEmail", 
+             patient_phone as "patientPhone", reason, 
+             facility_name as "facilityName", facility_address as "facilityAddress", 
+             facility_phone as "facilityPhone", selected_date as "selectedDate", 
+             selected_time as "selectedTime", status, created_at as "createdAt",
+             updated_at as "updatedAt"
+      FROM appointments ORDER BY created_at DESC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.put('/api/appointments/:id/status', async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  
+  if (!isDatabaseReady) {
+    const index = fallbackAppointments.findIndex(a => String(a.id) === String(id));
+    if (index >= 0) {
+      fallbackAppointments[index].status = status;
+      fallbackAppointments[index].updatedAt = new Date().toISOString();
+      return res.json({ success: true });
+    }
+    return res.status(404).json({ error: 'Not found' });
+  }
+
+  try {
+    await pool.query('UPDATE appointments SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [status, id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.delete('/api/appointments/:id', async (req, res) => {
+  const { id } = req.params;
+  if (!isDatabaseReady) {
+    fallbackAppointments = fallbackAppointments.filter(a => String(a.id) !== String(id));
+    return res.json({ success: true });
+  }
+
+  try {
+    await pool.query('DELETE FROM appointments WHERE id = $1', [id]);
     res.json({ success: true });
   } catch (err) {
     console.error(err);
