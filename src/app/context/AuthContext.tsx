@@ -13,7 +13,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isAdmin: boolean;
   signIn: (email: string, password: string, expectedRole?: 'user' | 'admin') => Promise<boolean | string>;
-  signUp: (name: string, email: string, password: string) => Promise<boolean>;
+  signUp: (name: string, email: string, password: string, role?: 'user' | 'admin') => Promise<boolean>;
   signOut: () => void;
 }
 
@@ -81,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return tryLocal();
   };
 
-  const signUp = async (name: string, email: string, password: string): Promise<boolean> => {
+  const signUp = async (name: string, email: string, password: string, role: 'user' | 'admin' = 'user'): Promise<boolean> => {
     if (apiBaseUrl) {
       try {
         const response = await fetch(`${apiBaseUrl}/api/signup`, {
@@ -89,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ name, email, password }),
+          body: JSON.stringify({ name, email, password, role }),
         });
 
         if (response.ok) {
@@ -109,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    const result = localSignUp(name, email, password, 'user');
+    const result = localSignUp(name, email, password, role);
     if (!result.ok) {
       return false;
     }

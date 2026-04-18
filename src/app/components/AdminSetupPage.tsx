@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router';
 import { Shield, Lock, Mail, User, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import { Input } from './ui/input';
@@ -6,7 +6,7 @@ import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Label } from './ui/label';
 import { Alert, AlertDescription } from './ui/alert';
-import { localHasAnyAdmin, localSignUp } from '../auth/localAuth';
+import { useAuth } from '../context/AuthContext';
 
 export function AdminSetupPage() {
   const navigate = useNavigate();
@@ -19,7 +19,29 @@ export function AdminSetupPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const alreadyHasAdmin = useMemo(() => localHasAnyAdmin(), []);
+  const { signUp } = useAuth();
+  const [alreadyHasAdmin, setAlreadyHasAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+      if (apiBaseUrl) {
+        try {
+          const res = await fetch(`${apiBaseUrl}/api/check-admin`);
+          if (res.ok) {
+            const data = await res.json();
+            setAlreadyHasAdmin(data.hasAdmin);
+            return;
+          }
+        } catch (err) {
+          console.warn('API error, falling back to local Auth', err);
+        }
+      }
+      const { localHasAnyAdmin } = await import('../auth/localAuth');
+      setAlreadyHasAdmin(localHasAnyAdmin());
+    };
+    checkAdmin();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,13 +64,11 @@ export function AdminSetupPage() {
 
     setIsLoading(true);
     try {
-      const result = localSignUp(name, email, password, 'admin');
-      if (!result.ok) {
-        setError('An account with this email already exists.');
+      const ok = await signUp(name, email, password, 'admin');
+      if (!ok) {
+        setError('An account with this email already exists or setup failed.');
         return;
       }
-      // auto-login admin
-      localStorage.setItem('healthfinder_user', JSON.stringify(result.user));
       navigate('/admin');
     } finally {
       setIsLoading(false);

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link, Navigate } from 'react-router';
 import { Shield, Lock, Mail, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { Input } from './ui/input';
@@ -7,7 +7,6 @@ import { Card } from './ui/card';
 import { Label } from './ui/label';
 import { Alert, AlertDescription } from './ui/alert';
 import { useAuth } from '../context/AuthContext';
-import { localHasAnyAdmin } from '../auth/localAuth';
 
 export function AdminSignInPage() {
   const [email, setEmail] = useState('');
@@ -17,6 +16,28 @@ export function AdminSignInPage() {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { signIn, isAuthenticated, isAdmin } = useAuth();
+  const [hasAdmin, setHasAdmin] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+      if (apiBaseUrl) {
+        try {
+          const res = await fetch(`${apiBaseUrl}/api/check-admin`);
+          if (res.ok) {
+            const data = await res.json();
+            setHasAdmin(data.hasAdmin);
+            return;
+          }
+        } catch (err) {
+          console.warn('API error:', err);
+        }
+      }
+      const { localHasAnyAdmin } = await import('../auth/localAuth');
+      setHasAdmin(localHasAnyAdmin());
+    };
+    checkAdmin();
+  }, []);
 
   if (isAuthenticated && isAdmin) {
     return <Navigate to="/admin" replace />;
@@ -43,7 +64,7 @@ export function AdminSignInPage() {
     }
   };
 
-  const showSetupLink = !localHasAnyAdmin();
+  const showSetupLink = hasAdmin === false;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center px-4">

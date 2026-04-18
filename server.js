@@ -33,8 +33,14 @@ const initDB = async () => {
         password VARCHAR(100) NOT NULL
       );
     `);
+    
+    // Add role column for existing databases that don't have it
+    await pool.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'user';
+    `);
+    
     isDatabaseReady = true;
-    console.log('Database initialized');
+    console.log('Database initialized with role support');
   } catch (err) {
     isDatabaseReady = false;
     console.error('Error initializing database:', err);
@@ -44,7 +50,7 @@ const initDB = async () => {
 initDB();
 
 app.post('/api/signup', async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, role = 'user' } = req.body;
   if (!name || !email || !password) {
     return res.status(400).json({ error: 'Name, email, and password are required' });
   }
@@ -60,6 +66,7 @@ app.post('/api/signup', async (req, res) => {
       name,
       email,
       password,
+      role,
     };
     fallbackUsers.push(createdUser);
 
@@ -67,13 +74,14 @@ app.post('/api/signup', async (req, res) => {
       id: createdUser.id,
       name: createdUser.name,
       email: createdUser.email,
+      role: createdUser.role,
     });
   }
 
   try {
     const result = await pool.query(
-      'INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING id, name, email',
-      [name, email, password]
+      'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role',
+      [name, email, password, role]
     );
     res.json(result.rows[0]);
   } catch (err) {
@@ -101,12 +109,13 @@ app.post('/api/signin', async (req, res) => {
       id: foundUser.id,
       name: foundUser.name,
       email: foundUser.email,
+      role: foundUser.role || 'user',
     });
   }
 
   try {
     const result = await pool.query(
-      'SELECT id, name, email FROM users WHERE email = $1 AND password = $2',
+      'SELECT id, name, email, role FROM users WHERE email = $1 AND password = $2',
       [email, password]
     );
     if (result.rows.length === 0) {
@@ -121,13 +130,27 @@ app.post('/api/signin', async (req, res) => {
 
 app.get('/api/users', async (req, res) => {
   if (!isDatabaseReady) {
-    return res.json(fallbackUsers.map(u => ({ id: u.id, name: u.name, email: u.email, role: 'user' })));
+    return res.json(fallbackUsers.map(u => ({ id: u.id, name: u.name, email: u.email, role: u.role || 'user' })));
   }
 
   try {
-    const result = await pool.query('SELECT id, name, email FROM users');
-    const usersWithRoles = result.rows.map(u => ({ ...u, role: 'user' }));
-    res.json(usersWithRoles);
+    const result = await pool.query('SELECT id, name, email, role FROM users');
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.get('/api/check-admin', async (req, res) => {
+  if (!isDatabaseReady) {
+    const hasAdmin = fallbackUsers.some(u => u.role === 'admin');
+    return res.json({ hasAdmin });
+  }
+
+  try {
+    const result = await pool.query("SELECT 1 FROM users WHERE role = 'admin' LIMIT 1");
+    res.json({ hasAdmin: result.rows.length > 0 });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
