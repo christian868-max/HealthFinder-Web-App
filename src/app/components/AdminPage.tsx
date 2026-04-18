@@ -98,9 +98,6 @@ export function AdminPage() {
     );
   };
 
-  useEffect(() => {
-    refreshAppointments();
-  }, []);
 
   const pendingCount = useMemo(() => appointments.filter((a) => (a.status ?? 'pending') === 'pending').length, [appointments]);
 
@@ -257,7 +254,15 @@ export function AdminPage() {
     refreshAccounts();
   };
 
-  useMemo(() => { refreshAccounts(); }, []);
+  useEffect(() => {
+    refreshAppointments();
+    refreshAccounts();
+    const interval = setInterval(() => {
+      refreshAppointments();
+      refreshAccounts();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const userAccounts = accounts.filter((a) => a.role === 'user');
   const adminAccounts = accounts.filter((a) => a.role === 'admin');
