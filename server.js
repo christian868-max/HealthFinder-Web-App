@@ -189,6 +189,25 @@ app.post('/api/users/:email/ping', async (req, res) => {
   }
 });
 
+app.post('/api/users/:email/logout', async (req, res) => {
+  const email = req.params.email;
+  if (!isDatabaseReady) {
+    const user = fallbackUsers.find(u => u.email === email);
+    if (user) {
+      user.last_active_at = new Date(Date.now() - 10 * 60000).toISOString();
+    }
+    return res.json({ success: true });
+  }
+
+  try {
+    await pool.query("UPDATE users SET last_active_at = CURRENT_TIMESTAMP - INTERVAL '10 minutes' WHERE email = $1", [email]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 app.get('/api/check-admin', async (req, res) => {
   if (!isDatabaseReady) {
     const hasAdmin = fallbackUsers.some(u => u.role === 'admin');

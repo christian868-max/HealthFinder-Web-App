@@ -141,6 +141,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = () => {
     if (user?.email) {
       setLocalAccountActive(user.email, false);
+      if (apiBaseUrl) {
+         fetch(`${apiBaseUrl}/api/users/${encodeURIComponent(user.email)}/logout`, { method: 'POST' }).catch(() => {});
+      }
     }
     setUser(null);
     localStorage.removeItem('healthfinder_user');
