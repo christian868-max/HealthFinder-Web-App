@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { CalendarDays, CheckCircle, XCircle, Building2, Plus, Users, Shield, UserCircle2, Trash2, Eye, EyeOff, MapPin } from 'lucide-react';
+import { CalendarDays, CheckCircle, XCircle, Building2, Plus, Users, Shield, UserCircle2, Trash2, Eye, EyeOff, MapPin, X, Maximize2 } from 'lucide-react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -157,6 +157,7 @@ export function AdminPage() {
   const [facilityMapY, setFacilityMapY] = useState('50');
   const [facilityCapabilities, setFacilityCapabilities] = useState('');
   const [facilitySpecialties, setFacilitySpecialties] = useState('');
+  const [isAdminMapModalOpen, setIsAdminMapModalOpen] = useState(false);
 
   const handleAdminMapClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -543,8 +544,19 @@ export function AdminPage() {
                     <Input value={facilitySpecialties} onChange={(e) => setFacilitySpecialties(e.target.value)} placeholder="General Medicine, Pediatrics" />
                   </div>
                   <div>
-                    <Label className="mb-2 block">Location on Map</Label>
-                    <div className="text-xs text-gray-500 mb-2">Click to pin location. Current: ({facilityMapX}%, {facilityMapY}%)</div>
+                    <div className="flex items-center justify-between mb-2">
+                      <Label className="block">Location on Map</Label>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-6 text-[10px] px-2 gap-1 text-blue-600"
+                        onClick={() => setIsAdminMapModalOpen(true)}
+                      >
+                        <Maximize2 className="size-3" />
+                        Show Full Map
+                      </Button>
+                    </div>
+                    <div className="text-xs text-gray-500 mb-2">Click below or use full map. Current: ({facilityMapX}%, {facilityMapY}%)</div>
                     <div 
                       className="relative w-full h-40 bg-blue-50/50 rounded-md overflow-hidden cursor-crosshair border"
                       onClick={handleAdminMapClick}
@@ -793,7 +805,69 @@ export function AdminPage() {
           </TabsContent>
         </Tabs>
       </main>
-    </div>
+
+    {/* Large Map Modal for Admin */}
+    {isAdminMapModalOpen && (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+        <Card className="w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden bg-white shadow-2xl">
+          <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+            <div>
+              <h3 className="text-xl font-bold">Pinpoint Facility Location</h3>
+              <p className="text-sm text-gray-600">Click on the map to set the exact location for "{facilityName || 'New Facility'}".</p>
+            </div>
+            <Button variant="ghost" size="icon" onClick={() => setIsAdminMapModalOpen(false)}>
+              <X className="size-5" />
+            </Button>
+          </div>
+          
+          <div className="flex-1 relative overflow-hidden bg-blue-50/50 min-h-[500px]">
+            <div 
+              className="absolute inset-0 cursor-crosshair"
+              onClick={handleAdminMapClick}
+            >
+              <img 
+                src="/mock-map.png" 
+                alt="City Map" 
+                className="w-full h-full object-contain bg-white"
+                draggable={false}
+              />
+              
+              {/* Other Facilities as reference */}
+              {facilities.map(f => (
+                <div 
+                  key={f.id} 
+                  className="absolute -translate-x-1/2 -translate-y-full opacity-40 pointer-events-none"
+                  style={{ left: `${f.mapX || 50}%`, top: `${f.mapY || 50}%` }}
+                >
+                  <div className="bg-gray-400 rounded-full p-1 shadow-sm border border-white">
+                    <div className="size-2 bg-white rounded-full" />
+                  </div>
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-0.5 text-[8px] font-medium text-gray-500 whitespace-nowrap">
+                    {f.name}
+                  </div>
+                </div>
+              ))}
+
+              {/* Selected Pin */}
+              <div 
+                className="absolute -translate-x-1/2 -translate-y-full pointer-events-none z-20 drop-shadow-xl"
+                style={{ left: `${facilityMapX}%`, top: `${facilityMapY}%` }}
+              >
+                <MapPin className="size-10 text-red-600 fill-red-100" />
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg whitespace-nowrap">
+                  New Location
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 border-t bg-gray-50 flex justify-end gap-3">
+            <Button variant="outline" className="px-6" onClick={() => setIsAdminMapModalOpen(false)}>Cancel</Button>
+            <Button onClick={() => setIsAdminMapModalOpen(false)} size="lg" className="px-10">Confirm Position</Button>
+          </div>
+        </Card>
+      </div>
+    )}
+  </div>
   );
 }
-
