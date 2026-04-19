@@ -64,6 +64,8 @@ function makeFacilityDefaults(partial: Partial<Facility> & Pick<Facility, 'name'
     phoneNumber: partial.phoneNumber ?? '',
     operatingHours: partial.operatingHours ?? '8:00 AM - 5:00 PM',
     emergencyServices: partial.emergencyServices ?? false,
+    mapX: partial.mapX ?? 50,
+    mapY: partial.mapY ?? 50,
   };
 }
 
@@ -151,6 +153,8 @@ export function AdminPage() {
   const [facilityAddress, setFacilityAddress] = useState('');
   const [facilityPhone, setFacilityPhone] = useState('');
   const [facilityHours, setFacilityHours] = useState('8:00 AM - 5:00 PM');
+  const [facilityMapX, setFacilityMapX] = useState('50');
+  const [facilityMapY, setFacilityMapY] = useState('50');
 
   const addFacility = async () => {
     const created = makeFacilityDefaults({
@@ -159,6 +163,8 @@ export function AdminPage() {
       address: facilityAddress.trim(),
       phoneNumber: facilityPhone.trim(),
       operatingHours: facilityHours.trim() || '8:00 AM - 5:00 PM',
+      mapX: Number(facilityMapX),
+      mapY: Number(facilityMapY),
     });
     
     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || '';
@@ -181,6 +187,8 @@ export function AdminPage() {
     setFacilityName('');
     setFacilityAddress('');
     setFacilityPhone('');
+    setFacilityMapX('50');
+    setFacilityMapY('50');
   };
 
   // Accounts (local only)
@@ -511,6 +519,16 @@ export function AdminPage() {
                   <div>
                     <Label>Operating Hours</Label>
                     <Input value={facilityHours} onChange={(e) => setFacilityHours(e.target.value)} placeholder="8:00 AM - 5:00 PM" />
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <Label>Map X (%)</Label>
+                      <Input type="number" min="0" max="100" value={facilityMapX} onChange={(e) => setFacilityMapX(e.target.value)} placeholder="50" />
+                    </div>
+                    <div className="flex-1">
+                      <Label>Map Y (%)</Label>
+                      <Input type="number" min="0" max="100" value={facilityMapY} onChange={(e) => setFacilityMapY(e.target.value)} placeholder="50" />
+                    </div>
                   </div>
 
                   <Button

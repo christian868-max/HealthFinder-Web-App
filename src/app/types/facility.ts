@@ -17,4 +17,6 @@ export interface Facility {
   phoneNumber: string;
   operatingHours: string;
   emergencyServices: boolean;
+  mapX?: number; // 0-100 percentage
+  mapY?: number; // 0-100 percentage
 }

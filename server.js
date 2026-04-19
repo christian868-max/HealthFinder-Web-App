@@ -70,8 +70,9 @@ const initDB = async () => {
     `);
     
     // Facilities table
+    await pool.query('DROP TABLE IF EXISTS facilities');
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS facilities (
+      CREATE TABLE facilities (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         type VARCHAR(100),
@@ -87,6 +88,8 @@ const initDB = async () => {
         phone_number VARCHAR(100),
         operating_hours VARCHAR(255),
         emergency_services BOOLEAN,
+        map_x NUMERIC,
+        map_y NUMERIC,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
@@ -98,14 +101,14 @@ const initDB = async () => {
     const facilityCount = await pool.query('SELECT COUNT(*) FROM facilities');
     if (parseInt(facilityCount.rows[0].count) === 0) {
       const mockFacilities = [
-        { name: 'Central Medical Hospital', type: 'Hospital', address: '123 Main Street, Downtown', distance: 2.3, rating: 4.5, crowdLevel: 'Moderate', waitTime: 25, availableToday: true, nextAvailable: 'Today at 2:00 PM', capabilities: ['Emergency Care', 'Surgery', 'Diagnostics', 'Pharmacy', 'Laboratory'], specialties: ['Cardiology', 'Neurology', 'Orthopedics', 'General Medicine', 'Pediatrics'], phoneNumber: '+1 (555) 123-4567', operatingHours: '24/7', emergencyServices: true },
-        { name: 'QuickCare Urgent Care', type: 'Urgent Care', address: '456 Oak Avenue, Midtown', distance: 1.5, rating: 4.3, crowdLevel: 'Low', waitTime: 10, availableToday: true, nextAvailable: 'Now', capabilities: ['Minor Injuries', 'X-Ray', 'Laboratory', 'Vaccinations'], specialties: ['General Medicine', 'Minor Emergencies'], phoneNumber: '+1 (555) 234-5678', operatingHours: '8:00 AM - 10:00 PM', emergencyServices: false },
-        { name: 'Wellness Family Clinic', type: 'Clinic', address: '789 Elm Street, Suburb', distance: 3.8, rating: 4.7, crowdLevel: 'Low', waitTime: 15, availableToday: true, nextAvailable: 'Today at 3:30 PM', capabilities: ['Consultation', 'Basic Diagnostics', 'Pharmacy'], specialties: ['Family Medicine', 'Pediatrics', 'Preventive Care'], phoneNumber: '+1 (555) 345-6789', operatingHours: '9:00 AM - 6:00 PM', emergencyServices: false },
-        { name: 'Metro General Hospital', type: 'Hospital', address: '321 Park Boulevard, City Center', distance: 4.2, rating: 4.6, crowdLevel: 'High', waitTime: 45, availableToday: true, nextAvailable: 'Today at 5:00 PM', capabilities: ['Emergency Care', 'ICU', 'Surgery', 'Diagnostics', 'Pharmacy', 'Laboratory'], specialties: ['Cardiology', 'Oncology', 'General Surgery', 'Emergency Medicine', 'Internal Medicine'], phoneNumber: '+1 (555) 456-7890', operatingHours: '24/7', emergencyServices: true },
-        { name: 'Riverside Medical Clinic', type: 'Clinic', address: '654 River Road, Riverside', distance: 5.1, rating: 4.2, crowdLevel: 'Moderate', waitTime: 20, availableToday: true, nextAvailable: 'Today at 4:15 PM', capabilities: ['Consultation', 'Laboratory', 'Pharmacy', 'Physical Therapy'], specialties: ['General Medicine', 'Physical Therapy', 'Dermatology'], phoneNumber: '+1 (555) 567-8901', operatingHours: '8:00 AM - 8:00 PM', emergencyServices: false },
-        { name: 'Heart & Lung Specialized Center', type: 'Specialized Center', address: '987 Medical Plaza, Healthcare District', distance: 6.3, rating: 4.8, crowdLevel: 'Low', waitTime: 30, availableToday: false, nextAvailable: 'Tomorrow at 10:00 AM', capabilities: ['Advanced Diagnostics', 'Surgery', 'Specialized Treatment'], specialties: ['Cardiology', 'Pulmonology', 'Thoracic Surgery'], phoneNumber: '+1 (555) 678-9012', operatingHours: '7:00 AM - 7:00 PM', emergencyServices: false },
-        { name: 'ExpressCare Walk-In Clinic', type: 'Urgent Care', address: '147 Commerce Street, Shopping District', distance: 2.9, rating: 4.1, crowdLevel: 'Low', waitTime: 8, availableToday: true, nextAvailable: 'Now', capabilities: ['Walk-In Consultation', 'Basic Laboratory', 'Prescriptions'], specialties: ['General Medicine', 'Travel Medicine'], phoneNumber: '+1 (555) 789-0123', operatingHours: '7:00 AM - 11:00 PM', emergencyServices: false },
-        { name: 'St. Mary\'s Community Hospital', type: 'Hospital', address: '258 Chapel Lane, North Side', distance: 7.5, rating: 4.4, crowdLevel: 'Moderate', waitTime: 35, availableToday: true, nextAvailable: 'Today at 6:00 PM', capabilities: ['Emergency Care', 'Maternity', 'Surgery', 'Diagnostics', 'Laboratory'], specialties: ['Obstetrics', 'Gynecology', 'General Surgery', 'Pediatrics'], phoneNumber: '+1 (555) 890-1234', operatingHours: '24/7', emergencyServices: true }
+        { name: 'Central Medical Hospital', type: 'Hospital', address: '123 Main Street, Downtown', distance: 2.3, rating: 4.5, crowdLevel: 'Moderate', waitTime: 25, availableToday: true, nextAvailable: 'Today at 2:00 PM', capabilities: ['Emergency Care', 'Surgery', 'Diagnostics', 'Pharmacy', 'Laboratory'], specialties: ['Cardiology', 'Neurology', 'Orthopedics', 'General Medicine', 'Pediatrics'], phoneNumber: '+1 (555) 123-4567', operatingHours: '24/7', emergencyServices: true, mapX: 45, mapY: 30 },
+        { name: 'QuickCare Urgent Care', type: 'Urgent Care', address: '456 Oak Avenue, Midtown', distance: 1.5, rating: 4.3, crowdLevel: 'Low', waitTime: 10, availableToday: true, nextAvailable: 'Now', capabilities: ['Minor Injuries', 'X-Ray', 'Laboratory', 'Vaccinations'], specialties: ['General Medicine', 'Minor Emergencies'], phoneNumber: '+1 (555) 234-5678', operatingHours: '8:00 AM - 10:00 PM', emergencyServices: false, mapX: 60, mapY: 50 },
+        { name: 'Wellness Family Clinic', type: 'Clinic', address: '789 Elm Street, Suburb', distance: 3.8, rating: 4.7, crowdLevel: 'Low', waitTime: 15, availableToday: true, nextAvailable: 'Today at 3:30 PM', capabilities: ['Consultation', 'Basic Diagnostics', 'Pharmacy'], specialties: ['Family Medicine', 'Pediatrics', 'Preventive Care'], phoneNumber: '+1 (555) 345-6789', operatingHours: '9:00 AM - 6:00 PM', emergencyServices: false, mapX: 20, mapY: 70 },
+        { name: 'Metro General Hospital', type: 'Hospital', address: '321 Park Boulevard, City Center', distance: 4.2, rating: 4.6, crowdLevel: 'High', waitTime: 45, availableToday: true, nextAvailable: 'Today at 5:00 PM', capabilities: ['Emergency Care', 'ICU', 'Surgery', 'Diagnostics', 'Pharmacy', 'Laboratory'], specialties: ['Cardiology', 'Oncology', 'General Surgery', 'Emergency Medicine', 'Internal Medicine'], phoneNumber: '+1 (555) 456-7890', operatingHours: '24/7', emergencyServices: true, mapX: 75, mapY: 25 },
+        { name: 'Riverside Medical Clinic', type: 'Clinic', address: '654 River Road, Riverside', distance: 5.1, rating: 4.2, crowdLevel: 'Moderate', waitTime: 20, availableToday: true, nextAvailable: 'Today at 4:15 PM', capabilities: ['Consultation', 'Laboratory', 'Pharmacy', 'Physical Therapy'], specialties: ['General Medicine', 'Physical Therapy', 'Dermatology'], phoneNumber: '+1 (555) 567-8901', operatingHours: '8:00 AM - 8:00 PM', emergencyServices: false, mapX: 85, mapY: 60 },
+        { name: 'Heart & Lung Specialized Center', type: 'Specialized Center', address: '987 Medical Plaza, Healthcare District', distance: 6.3, rating: 4.8, crowdLevel: 'Low', waitTime: 30, availableToday: false, nextAvailable: 'Tomorrow at 10:00 AM', capabilities: ['Advanced Diagnostics', 'Surgery', 'Specialized Treatment'], specialties: ['Cardiology', 'Pulmonology', 'Thoracic Surgery'], phoneNumber: '+1 (555) 678-9012', operatingHours: '7:00 AM - 7:00 PM', emergencyServices: false, mapX: 30, mapY: 15 },
+        { name: 'ExpressCare Walk-In Clinic', type: 'Urgent Care', address: '147 Commerce Street, Shopping District', distance: 2.9, rating: 4.1, crowdLevel: 'Low', waitTime: 8, availableToday: true, nextAvailable: 'Now', capabilities: ['Walk-In Consultation', 'Basic Laboratory', 'Prescriptions'], specialties: ['General Medicine', 'Travel Medicine'], phoneNumber: '+1 (555) 789-0123', operatingHours: '7:00 AM - 11:00 PM', emergencyServices: false, mapX: 50, mapY: 80 },
+        { name: 'St. Mary\'s Community Hospital', type: 'Hospital', address: '258 Chapel Lane, North Side', distance: 7.5, rating: 4.4, crowdLevel: 'Moderate', waitTime: 35, availableToday: true, nextAvailable: 'Today at 6:00 PM', capabilities: ['Emergency Care', 'Maternity', 'Surgery', 'Diagnostics', 'Laboratory'], specialties: ['Obstetrics', 'Gynecology', 'General Surgery', 'Pediatrics'], phoneNumber: '+1 (555) 890-1234', operatingHours: '24/7', emergencyServices: true, mapX: 15, mapY: 45 }
       ];
 
       for (const f of mockFacilities) {
@@ -113,12 +116,12 @@ const initDB = async () => {
           INSERT INTO facilities (
             name, type, address, distance, rating, crowd_level, wait_time,
             available_today, next_available, capabilities, specialties,
-            phone_number, operating_hours, emergency_services
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            phone_number, operating_hours, emergency_services, map_x, map_y
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
         `, [
           f.name, f.type, f.address, f.distance, f.rating, f.crowdLevel, f.waitTime,
           f.availableToday, f.nextAvailable, JSON.stringify(f.capabilities), JSON.stringify(f.specialties),
-          f.phoneNumber, f.operatingHours, f.emergencyServices
+          f.phoneNumber, f.operatingHours, f.emergencyServices, f.mapX, f.mapY
         ]);
       }
       console.log('Seeded database with 8 mock facilities.');
@@ -404,7 +407,8 @@ app.post('/api/facilities', async (req, res) => {
     name, type, address, distance = 1, rating = 4.5, crowdLevel = 'Low', 
     waitTime = 10, availableToday = true, nextAvailable = 'Now',
     capabilities = ['Consultation'], specialties = ['General Medicine'],
-    phoneNumber = '', operatingHours = '8:00 AM - 5:00 PM', emergencyServices = false
+    phoneNumber = '', operatingHours = '8:00 AM - 5:00 PM', emergencyServices = false,
+    mapX = 50, mapY = 50
   } = req.body;
 
   if (!isDatabaseReady) {
@@ -412,7 +416,7 @@ app.post('/api/facilities', async (req, res) => {
       id: String(fallbackFacilityId++),
       name, type, address, distance, rating, crowdLevel, waitTime,
       availableToday, nextAvailable, capabilities, specialties,
-      phoneNumber, operatingHours, emergencyServices
+      phoneNumber, operatingHours, emergencyServices, mapX, mapY
     };
     fallbackFacilities.push(created);
     return res.json(created);
@@ -423,17 +427,18 @@ app.post('/api/facilities', async (req, res) => {
       INSERT INTO facilities (
         name, type, address, distance, rating, crowd_level, wait_time,
         available_today, next_available, capabilities, specialties,
-        phone_number, operating_hours, emergency_services
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        phone_number, operating_hours, emergency_services, map_x, map_y
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING id, name, type, address, distance, rating, 
                 crowd_level as "crowdLevel", wait_time as "waitTime", 
                 available_today as "availableToday", next_available as "nextAvailable", 
                 capabilities, specialties, phone_number as "phoneNumber", 
-                operating_hours as "operatingHours", emergency_services as "emergencyServices"
+                operating_hours as "operatingHours", emergency_services as "emergencyServices",
+                map_x as "mapX", map_y as "mapY"
     `, [
       name, type, address, distance, rating, crowdLevel, waitTime,
       availableToday, nextAvailable, JSON.stringify(capabilities), JSON.stringify(specialties),
-      phoneNumber, operatingHours, emergencyServices
+      phoneNumber, operatingHours, emergencyServices, mapX, mapY
     ]);
     res.json(result.rows[0]);
   } catch (err) {
@@ -453,7 +458,8 @@ app.get('/api/facilities', async (req, res) => {
              crowd_level as "crowdLevel", wait_time as "waitTime", 
              available_today as "availableToday", next_available as "nextAvailable", 
              capabilities, specialties, phone_number as "phoneNumber", 
-             operating_hours as "operatingHours", emergency_services as "emergencyServices"
+             operating_hours as "operatingHours", emergency_services as "emergencyServices",
+             map_x as "mapX", map_y as "mapY"
       FROM facilities ORDER BY created_at DESC
     `);
     res.json(result.rows);

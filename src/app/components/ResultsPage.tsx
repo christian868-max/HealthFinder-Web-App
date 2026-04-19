@@ -25,6 +25,8 @@ export function ResultsPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const illness = searchParams.get('illness') || '';
+  const userLat = searchParams.get('lat');
+  const userLng = searchParams.get('lng');
   const { user, isAuthenticated, signOut } = useAuth();
 
   const [selectedType, setSelectedType] = useState<string>('all');
@@ -49,6 +51,20 @@ export function ResultsPage() {
   // Filter and sort facilities
   const filteredFacilities = useMemo(() => {
     let results = [...allFacilities];
+
+    // If user coordinates are provided, recalculate distance dynamically
+    if (userLat && userLng) {
+      const uy = Number(userLat);
+      const ux = Number(userLng);
+      results = results.map(f => {
+        const mx = f.mapX ?? 50;
+        const my = f.mapY ?? 50;
+        // Calculate Euclidean distance in percentages, scale to realistic km (e.g. max ~15km)
+        const rawDist = Math.sqrt(Math.pow(ux - mx, 2) + Math.pow(uy - my, 2));
+        const dynamicDistance = Number(Math.max(0.5, rawDist * 0.15).toFixed(1));
+        return { ...f, distance: dynamicDistance };
+      });
+    }
 
     // Filter by illness/specialty
     const relevantSpecialties = illnessToSpecialtyMap[illness] || [];
@@ -94,7 +110,7 @@ export function ResultsPage() {
     }
 
     return results;
-  }, [allFacilities, illness, selectedType, selectedCrowd, maxDistance, sortBy]);
+  }, [allFacilities, illness, userLat, userLng, selectedType, selectedCrowd, maxDistance, sortBy]);
 
   return (
     <div className="min-h-screen bg-gray-50">

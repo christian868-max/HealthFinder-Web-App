@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Search, Heart, Activity, Stethoscope, User, LogOut, CalendarCheck, ChevronDown } from 'lucide-react';
+import { Search, Heart, Activity, Stethoscope, User, LogOut, CalendarCheck, ChevronDown, MapPin, X } from 'lucide-react';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { commonIllnesses } from '../data/mockData';
 import { useAuth } from '../context/AuthContext';
+import { fetchFacilities } from '../storage/facilitiesStore';
+import { Facility } from '../types/facility';
 
 export function SearchPage() {
   const [illness, setIllness] = useState('');
@@ -14,6 +16,17 @@ export function SearchPage() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const accountMenuRef = useRef<HTMLDivElement | null>(null);
+
+  // Map state
+  const [isMapOpen, setIsMapOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [userMapX, setUserMapX] = useState(50);
+  const [userMapY, setUserMapY] = useState(50);
+  const [facilities, setFacilities] = useState<Facility[]>([]);
+  
+  useEffect(() => {
+    fetchFacilities().then(data => setFacilities(data));
+  }, []);
 
   const handleLogOut = () => {
     setIsAccountMenuOpen(false);
@@ -54,11 +67,25 @@ export function SearchPage() {
     }
   };
 
-  const handleSearch = (searchTerm?: string) => {
-    const term = searchTerm || illness;
+  const handleSearch = (termToSearch?: string) => {
+    const term = termToSearch || illness;
     if (term.trim()) {
-      navigate(`/results?illness=${encodeURIComponent(term)}`);
+      setSearchTerm(term);
+      setIsMapOpen(true);
     }
+  };
+
+  const confirmLocation = () => {
+    setIsMapOpen(false);
+    navigate(`/results?illness=${encodeURIComponent(searchTerm)}&lat=${userMapY}&lng=${userMapX}`);
+  };
+
+  const handleMapClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setUserMapX(Math.max(0, Math.min(100, x)));
+    setUserMapY(Math.max(0, Math.min(100, y)));
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -230,6 +257,70 @@ export function SearchPage() {
           </Card>
         </div>
       </div>
+
+      {/* Map Location Picker Modal */}
+      {isMapOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden bg-white">
+            <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+              <div>
+                <h3 className="text-xl font-bold">Where are you right now?</h3>
+                <p className="text-sm text-gray-600">Click on the map to set your location for accurate distance calculations.</p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => setIsMapOpen(false)}>
+                <X className="size-5" />
+              </Button>
+            </div>
+            
+            <div className="flex-1 relative overflow-hidden bg-blue-50/50 min-h-[400px]">
+              <div 
+                className="absolute inset-0 cursor-crosshair"
+                onClick={handleMapClick}
+              >
+                <img 
+                  src="/mock-map.png" 
+                  alt="City Map" 
+                  className="w-full h-full object-cover opacity-80"
+                  draggable={false}
+                />
+                
+                {/* Hospital Pins */}
+                {facilities.map(f => (
+                  <div 
+                    key={f.id} 
+                    className="absolute -translate-x-1/2 -translate-y-full pointer-events-none transition-transform hover:scale-110 group"
+                    style={{ left: `${f.mapX || 50}%`, top: `${f.mapY || 50}%` }}
+                  >
+                    <div className="bg-red-500 rounded-full p-1 shadow-md border-2 border-white">
+                      <Stethoscope className="size-3 text-white" />
+                    </div>
+                    {/* Tooltip */}
+                    <div className="absolute opacity-0 group-hover:opacity-100 transition-opacity bottom-full left-1/2 -translate-x-1/2 mb-2 bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
+                      {f.name}
+                    </div>
+                  </div>
+                ))}
+
+                {/* User Pin */}
+                <div 
+                  className="absolute -translate-x-1/2 -translate-y-full pointer-events-none z-20 drop-shadow-xl"
+                  style={{ left: `${userMapX}%`, top: `${userMapY}%` }}
+                >
+                  <MapPin className="size-8 text-blue-600 fill-blue-100" />
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-sm">
+                    You
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 border-t bg-gray-50 flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setIsMapOpen(false)}>Cancel</Button>
+              <Button onClick={confirmLocation} size="lg" className="px-8">Confirm Location</Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
