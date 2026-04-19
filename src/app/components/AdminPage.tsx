@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { useAuth } from '../context/AuthContext';
 import { Facility, FacilityType } from '../types/facility';
-import { getFacilities, saveFacilities } from '../storage/facilitiesStore';
+import { fetchFacilities, getLocalFacilities, saveLocalFacilities } from '../storage/facilitiesStore';
 import { LocalAccountSummary, listLocalAccounts, localSignUp, deleteLocalAccount } from '../auth/localAuth';
 
 type AppointmentStatus = 'pending' | 'confirmed' | 'rejected';
@@ -140,19 +140,19 @@ export function AdminPage() {
   };
 
   // Facilities
-  const [facilities, setFacilities] = useState<Facility[]>(() => getFacilities());
+  const [facilities, setFacilities] = useState<Facility[]>([]);
+
+  const refreshFacilities = async () => {
+    const data = await fetchFacilities();
+    setFacilities(data);
+  };
   const [facilityName, setFacilityName] = useState('');
   const [facilityType, setFacilityType] = useState<FacilityType>('Clinic');
   const [facilityAddress, setFacilityAddress] = useState('');
   const [facilityPhone, setFacilityPhone] = useState('');
   const [facilityHours, setFacilityHours] = useState('8:00 AM - 5:00 PM');
 
-  const saveFacilityList = (rows: Facility[]) => {
-    saveFacilities(rows);
-    setFacilities(rows);
-  };
-
-  const addFacility = () => {
+  const addFacility = async () => {
     const created = makeFacilityDefaults({
       name: facilityName.trim(),
       type: facilityType,
@@ -160,8 +160,24 @@ export function AdminPage() {
       phoneNumber: facilityPhone.trim(),
       operatingHours: facilityHours.trim() || '8:00 AM - 5:00 PM',
     });
-    const next = [created, ...facilities];
-    saveFacilityList(next);
+    
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+    if (apiBaseUrl) {
+      try {
+        await fetch(`${apiBaseUrl}/api/facilities`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(created)
+        });
+      } catch (e) {
+        console.warn('API add facility failed', e);
+      }
+    } else {
+      const next = [created, ...facilities];
+      saveLocalFacilities(next);
+    }
+    
+    refreshFacilities();
     setFacilityName('');
     setFacilityAddress('');
     setFacilityPhone('');
@@ -257,9 +273,11 @@ export function AdminPage() {
   useEffect(() => {
     refreshAppointments();
     refreshAccounts();
+    refreshFacilities();
     const interval = setInterval(() => {
       refreshAppointments();
       refreshAccounts();
+      refreshFacilities();
     }, 5000);
     return () => clearInterval(interval);
   }, []);
@@ -524,9 +542,19 @@ export function AdminPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => {
-                            const next = facilities.filter((x) => x.id !== f.id);
-                            saveFacilityList(next);
+                          onClick={async () => {
+                            const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+                            if (apiBaseUrl) {
+                              try {
+                                await fetch(`${apiBaseUrl}/api/facilities/${f.id}`, { method: 'DELETE' });
+                              } catch (e) {
+                                console.warn('API delete facility failed', e);
+                              }
+                            } else {
+                              const next = facilities.filter((x) => x.id !== f.id);
+                              saveLocalFacilities(next);
+                            }
+                            refreshFacilities();
                           }}
                         >
                           Remove

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router';
 import { ArrowLeft, SlidersHorizontal, MapPin, Clock, Users, Building2, User, LogOut } from 'lucide-react';
 import { Button } from './ui/button';
@@ -11,7 +11,7 @@ import { BookingDialog } from './BookingDialog';
 import { illnessToSpecialtyMap } from '../data/mockData';
 import { Facility, FacilityType, CrowdLevel } from '../types/facility';
 import { useAuth } from '../context/AuthContext';
-import { getFacilities } from '../storage/facilitiesStore';
+import { fetchFacilities } from '../storage/facilitiesStore';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,6 +34,12 @@ export function ResultsPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [allFacilities, setAllFacilities] = useState<Facility[]>([]);
+
+  // Fetch facilities once when the page loads
+  useEffect(() => {
+    fetchFacilities().then(data => setAllFacilities(data));
+  }, []);
 
   const handleBookAppointment = (facility: Facility) => {
     setSelectedFacility(facility);
@@ -42,7 +48,7 @@ export function ResultsPage() {
 
   // Filter and sort facilities
   const filteredFacilities = useMemo(() => {
-    let results = [...getFacilities()];
+    let results = [...allFacilities];
 
     // Filter by illness/specialty
     const relevantSpecialties = illnessToSpecialtyMap[illness] || [];
@@ -88,7 +94,7 @@ export function ResultsPage() {
     }
 
     return results;
-  }, [illness, selectedType, selectedCrowd, maxDistance, sortBy]);
+  }, [allFacilities, illness, selectedType, selectedCrowd, maxDistance, sortBy]);
 
   return (
     <div className="min-h-screen bg-gray-50">

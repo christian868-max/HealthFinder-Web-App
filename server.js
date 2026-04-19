@@ -23,6 +23,8 @@ let fallbackUsers = [];
 let fallbackUserId = 1;
 let fallbackAppointments = [];
 let fallbackAppointmentId = 1;
+let fallbackFacilities = [];
+let fallbackFacilityId = 1;
 
 // Initialize DB
 const initDB = async () => {
@@ -64,6 +66,28 @@ const initDB = async () => {
         status VARCHAR(20) DEFAULT 'pending',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    
+    // Facilities table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS facilities (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        type VARCHAR(100),
+        address TEXT,
+        distance NUMERIC,
+        rating NUMERIC,
+        crowd_level VARCHAR(50),
+        wait_time INTEGER,
+        available_today BOOLEAN,
+        next_available VARCHAR(100),
+        capabilities JSONB,
+        specialties JSONB,
+        phone_number VARCHAR(100),
+        operating_hours VARCHAR(255),
+        emergency_services BOOLEAN,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
     
@@ -338,6 +362,86 @@ app.delete('/api/appointments/:id', async (req, res) => {
 
   try {
     await pool.query('DELETE FROM appointments WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.post('/api/facilities', async (req, res) => {
+  const {
+    name, type, address, distance = 1, rating = 4.5, crowdLevel = 'Low', 
+    waitTime = 10, availableToday = true, nextAvailable = 'Now',
+    capabilities = ['Consultation'], specialties = ['General Medicine'],
+    phoneNumber = '', operatingHours = '8:00 AM - 5:00 PM', emergencyServices = false
+  } = req.body;
+
+  if (!isDatabaseReady) {
+    const created = {
+      id: String(fallbackFacilityId++),
+      name, type, address, distance, rating, crowdLevel, waitTime,
+      availableToday, nextAvailable, capabilities, specialties,
+      phoneNumber, operatingHours, emergencyServices
+    };
+    fallbackFacilities.push(created);
+    return res.json(created);
+  }
+
+  try {
+    const result = await pool.query(`
+      INSERT INTO facilities (
+        name, type, address, distance, rating, crowd_level, wait_time,
+        available_today, next_available, capabilities, specialties,
+        phone_number, operating_hours, emergency_services
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      RETURNING id, name, type, address, distance, rating, 
+                crowd_level as "crowdLevel", wait_time as "waitTime", 
+                available_today as "availableToday", next_available as "nextAvailable", 
+                capabilities, specialties, phone_number as "phoneNumber", 
+                operating_hours as "operatingHours", emergency_services as "emergencyServices"
+    `, [
+      name, type, address, distance, rating, crowdLevel, waitTime,
+      availableToday, nextAvailable, JSON.stringify(capabilities), JSON.stringify(specialties),
+      phoneNumber, operatingHours, emergencyServices
+    ]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.get('/api/facilities', async (req, res) => {
+  if (!isDatabaseReady) {
+    return res.json(fallbackFacilities);
+  }
+
+  try {
+    const result = await pool.query(`
+      SELECT id, name, type, address, distance, rating, 
+             crowd_level as "crowdLevel", wait_time as "waitTime", 
+             available_today as "availableToday", next_available as "nextAvailable", 
+             capabilities, specialties, phone_number as "phoneNumber", 
+             operating_hours as "operatingHours", emergency_services as "emergencyServices"
+      FROM facilities ORDER BY created_at DESC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.delete('/api/facilities/:id', async (req, res) => {
+  const { id } = req.params;
+  if (!isDatabaseReady) {
+    fallbackFacilities = fallbackFacilities.filter(f => String(f.id) !== String(id));
+    return res.json({ success: true });
+  }
+
+  try {
+    await pool.query('DELETE FROM facilities WHERE id = $1', [id]);
     res.json({ success: true });
   } catch (err) {
     console.error(err);
