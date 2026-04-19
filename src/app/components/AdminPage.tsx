@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { CalendarDays, CheckCircle, XCircle, Building2, Plus, Users, Shield, UserCircle2, Trash2, Eye, EyeOff } from 'lucide-react';
+import { CalendarDays, CheckCircle, XCircle, Building2, Plus, Users, Shield, UserCircle2, Trash2, Eye, EyeOff, MapPin } from 'lucide-react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
