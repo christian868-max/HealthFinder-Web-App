@@ -294,8 +294,8 @@ export function SearchPage() {
                     <div className="bg-red-500 rounded-full p-1 shadow-md border-2 border-white">
                       <Stethoscope className="size-3 text-white" />
                     </div>
-                    {/* Tooltip */}
-                    <div className="absolute opacity-0 group-hover:opacity-100 transition-opacity bottom-full left-1/2 -translate-x-1/2 mb-2 bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
+                    {/* Label */}
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-white/95 text-gray-900 text-[10px] font-semibold px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap z-10 border border-gray-200">
                       {f.name}
                     </div>
                   </div>

@@ -155,6 +155,16 @@ export function AdminPage() {
   const [facilityHours, setFacilityHours] = useState('8:00 AM - 5:00 PM');
   const [facilityMapX, setFacilityMapX] = useState('50');
   const [facilityMapY, setFacilityMapY] = useState('50');
+  const [facilityCapabilities, setFacilityCapabilities] = useState('');
+  const [facilitySpecialties, setFacilitySpecialties] = useState('');
+
+  const handleAdminMapClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setFacilityMapX(Math.max(0, Math.min(100, x)).toFixed(1));
+    setFacilityMapY(Math.max(0, Math.min(100, y)).toFixed(1));
+  };
 
   const addFacility = async () => {
     const created = makeFacilityDefaults({
@@ -165,6 +175,8 @@ export function AdminPage() {
       operatingHours: facilityHours.trim() || '8:00 AM - 5:00 PM',
       mapX: Number(facilityMapX),
       mapY: Number(facilityMapY),
+      capabilities: facilityCapabilities ? facilityCapabilities.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+      specialties: facilitySpecialties ? facilitySpecialties.split(',').map(s => s.trim()).filter(Boolean) : undefined,
     });
     
     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || '';
@@ -189,6 +201,8 @@ export function AdminPage() {
     setFacilityPhone('');
     setFacilityMapX('50');
     setFacilityMapY('50');
+    setFacilityCapabilities('');
+    setFacilitySpecialties('');
   };
 
   // Accounts (local only)
@@ -520,14 +534,33 @@ export function AdminPage() {
                     <Label>Operating Hours</Label>
                     <Input value={facilityHours} onChange={(e) => setFacilityHours(e.target.value)} placeholder="8:00 AM - 5:00 PM" />
                   </div>
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <Label>Map X (%)</Label>
-                      <Input type="number" min="0" max="100" value={facilityMapX} onChange={(e) => setFacilityMapX(e.target.value)} placeholder="50" />
-                    </div>
-                    <div className="flex-1">
-                      <Label>Map Y (%)</Label>
-                      <Input type="number" min="0" max="100" value={facilityMapY} onChange={(e) => setFacilityMapY(e.target.value)} placeholder="50" />
+                  <div>
+                    <Label>Capabilities (comma separated)</Label>
+                    <Input value={facilityCapabilities} onChange={(e) => setFacilityCapabilities(e.target.value)} placeholder="Consultation, Pharmacy" />
+                  </div>
+                  <div>
+                    <Label>Specialties (comma separated)</Label>
+                    <Input value={facilitySpecialties} onChange={(e) => setFacilitySpecialties(e.target.value)} placeholder="General Medicine, Pediatrics" />
+                  </div>
+                  <div>
+                    <Label className="mb-2 block">Location on Map</Label>
+                    <div className="text-xs text-gray-500 mb-2">Click to pin location. Current: ({facilityMapX}%, {facilityMapY}%)</div>
+                    <div 
+                      className="relative w-full h-40 bg-blue-50/50 rounded-md overflow-hidden cursor-crosshair border"
+                      onClick={handleAdminMapClick}
+                    >
+                      <img 
+                        src="/mock-map.png" 
+                        alt="City Map" 
+                        className="w-full h-full object-cover opacity-80"
+                        draggable={false}
+                      />
+                      <div 
+                        className="absolute -translate-x-1/2 -translate-y-full pointer-events-none drop-shadow-md"
+                        style={{ left: `${facilityMapX}%`, top: `${facilityMapY}%` }}
+                      >
+                        <MapPin className="size-6 text-red-600 fill-red-100" />
+                      </div>
                     </div>
                   </div>
 
