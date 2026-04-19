@@ -274,18 +274,47 @@ export function AdminPage() {
     return date.toLocaleString();
   };
 
-  const createAccount = () => {
+  const createAccount = async () => {
     setAccountMsg('');
     if (newPassword.length < 6) {
       setAccountMsg('Password must be at least 6 characters.');
       return;
     }
+
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+    if (apiBaseUrl) {
+      try {
+        const res = await fetch(`${apiBaseUrl}/api/signup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: newName, email: newEmail, password: newPassword, role: newRole })
+        });
+        
+        if (!res.ok) {
+          const data = await res.json();
+          setAccountMsg(data.error || 'Failed to create account.');
+          return;
+        }
+        
+        const data = await res.json();
+        setAccountMsg(`Created ${newRole} account for ${data.email}`);
+        setNewName('');
+        setNewEmail('');
+        setNewPassword('');
+        setNewRole('user');
+        refreshAccounts();
+        return;
+      } catch (e) {
+        console.warn('API signup failed, falling back to local signup', e);
+      }
+    }
+
     const result = localSignUp(newName, newEmail, newPassword, newRole);
     if (!result.ok) {
-      setAccountMsg('Email already exists.');
+      setAccountMsg('Email already exists locally.');
       return;
     }
-    setAccountMsg(`Created ${newRole} account for ${result.user.email}`);
+    setAccountMsg(`Created ${newRole} account for ${result.user.email} (Local)`);
     setNewName('');
     setNewEmail('');
     setNewPassword('');
