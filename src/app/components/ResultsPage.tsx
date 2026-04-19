@@ -130,7 +130,7 @@ export function ResultsPage() {
               </Button>
               <div>
                 <h1 className="text-xl font-semibold">
-                  Results for "{illness}"
+                  Recommended
                 </h1>
                 <p className="text-sm text-gray-600">
                   Found {filteredFacilities.length} facilities
